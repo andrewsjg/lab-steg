@@ -38,7 +38,7 @@ def bits_from_bytes(byte_size):
 
 if __name__ == "__main__":
 
-    bin_string, bit_count = get_binary('/Users/james/Documents/Work/UM Docs/UMQ_5.3/doc/UME/UMP_Store_Architecture.png')
+    bin_string, bit_count = get_binary('input.png')
 
     print bits_from_bytes(5 * 1024)
     print size_required_to_hide(bits_from_bytes(5 * 1024)) / 1024
