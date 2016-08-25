@@ -1,6 +1,8 @@
 from PIL import Image
 from functools import partial
 
+# References:
+# https://github.com/cyberinc/cloacked-pixel
 
 def read_binary_into_string(file_path):
 
@@ -68,20 +70,16 @@ def size_required_to_hide(input_size_bits):
     return 3 * 8 * input_size_bits
 
 
-def hide_file(binary_string, host_image):
-    pass
-
 def bits_from_bytes(byte_size):
 
     return byte_size * 1024 * 8
 
-if __name__ == "__main__":
+def hide_file(payload_file, host_image):
 
-    bin_string, bit_count = read_binary_into_string('shakespeare.zip')
-    input_image = Image.open('input.jpg')
+    bin_string, bit_count = read_binary_into_string(payload_file)
+    input_image = Image.open(host_image)
 
-    ((width,hieght), max_hideable_size) = max_hidable(input_image)
-
+    ((width, hieght), max_hideable_size) = max_hidable(input_image)
 
     if (bit_count / 8 / 1024) < max_hideable_size:
         print 'Can hide payload file in host image'
@@ -90,11 +88,7 @@ if __name__ == "__main__":
         print 'Host image is to small to contain the payload file'
 
 
+if __name__ == "__main__":
 
+    hide_file('shakespeare.zip', 'input.jpg')
 
-    #print "Max Hideable: " + str(float(max_hidable(bit_count)) / 8 / 1024 / 1024)
-
-    #print bits_from_bytes(5 * 1024)
-    #print size_required_to_hide(bits_from_bytes(5 * 1024)) / 1024
-
-    #write_binary(bin_string, 'out.png')
