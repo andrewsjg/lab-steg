@@ -31,7 +31,20 @@ def read_binary_into_string_array(file_path):
 
                 bit_count += 8
 
-    return bin_string_array, bit_count
+    # Add 4 bytes to the beginning of the array to store the data size
+    # this is needed later when we extract the binary
+    # NOTE: This means we can only hide things in the single digit megabyte size (??)
+
+    data_size = len(bin_string_array) / 1024
+    output_array = []
+
+    for num in str(data_size):
+        # print '{0:08b}'.format(ord(num))
+        output_array.append('{0:08b}'.format(ord(num)))
+
+    output_array[1:1] = bin_string_array
+    return output_array, bit_count
+
 
 
 def write_binary_from_string(big_binary_string, out_file):
@@ -139,6 +152,8 @@ def hide_file(payload_file, host_image):
     #for pixel_value in list(steg_image_data):
     #    print pixel_value
 
+    print len(bin_string_array)
+
     print 'INFO: Embedding file'
     byte_index = 0
     for h in range(height):
@@ -158,8 +173,10 @@ def hide_file(payload_file, host_image):
 
                 _, encoded_green_int = lsb_encode_byte('0' + bin_string_array[byte_index][6:],'{0:08b}'.format(green), debug=False)
 
-                #steg_image_data.putpixel((w,h),(encoded_red_int,encoded_blue_int,encoded_green_int, alpha))
-                steg_image_data.putpixel((w, h), (red, blue, green, alpha))
+                steg_image_data.putpixel((w,h),(encoded_red_int,encoded_blue_int,encoded_green_int, alpha))
+
+            else:
+                steg_image_data.putpixel((w, h), (red, green, blue, alpha))
 
             byte_index = byte_index + 1
 
@@ -168,8 +185,58 @@ def hide_file(payload_file, host_image):
 
     print 'INFO: Embedding complete'
 
+def get_lsb(input_byte_string):
+    return input_byte_string[-3:]
+
+def unhide_file(host_image):
+    steg_image = Image.open(host_image)
+
+    image_data = steg_image.convert("RGBA").getdata()
+    (width, height) = steg_image.size
+
+    hidden_data = []
+
+    # get the size of the hidden data from the first 4 bytes
+
+    byte_count = 0
+    size_array = []
+    size_str = ""
+    for h in range(height):
+        for w in range(width):
+
+            (red, green, blue, alpha) = image_data.getpixel((w, h))
+
+            if byte_count < 4:
+
+                print '{0:08b}'.format(red)
+                print '{0:08b}'.format(blue)
+                print '{0:08b}'.format(green)
+                print
+                print '{0:08b}'.format(red)[-3:]
+                print '{0:08b}'.format(blue)[-3:]
+                print '{0:08b}'.format(green)[-3:]
+
+                size_byte = get_lsb('{0:08b}'.format(red)) + get_lsb('{0:08b}'.format(blue)) + get_lsb('{0:08b}'.format(green))[-2:]
+                print 'Size byte: ' + size_byte
+                size_array.append(size_byte)
+
+            elif byte_count == 4:
+                print size_array
+
+                for byte_str in size_array:
+                    # convert byte string to integer then append to new string
+
+                    print byte_str
+                    size_str += str(int(byte_str,2))
+
+                print size_str
+
+            byte_count = byte_count + 1
+
 
 if __name__ == "__main__":
 
-    hide_file('shakespeare.zip', 'input.jpg')
+    #hide_file('shakespeare.zip', 'input.jpg')
+    print 'INFO: UN HIDING!'
+    unhide_file('output.jpg')
 
