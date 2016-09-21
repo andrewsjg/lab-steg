@@ -19,12 +19,10 @@ def read_binary_into_string_array(file_path):
     # Open the binary file for reading (rb mode) and read it byte by byte
 
     with open(file_path, 'rb') as input_file:
-        bin_string = ''
 
         # TODO: Document partial
         for byte in iter(partial(input_file.read, 1), ''):
             if len(byte) > 0:
-
                 # found on stackoverflow here: http://stackoverflow.com/questions/2872381/how-to-read-a-file-byte-by-byte-in-python-and-how-to-print-a-bytelist-as-a-binar
                 #bin_string += '{0:08b}'.format(ord(byte)) + '\n'
                 bin_string_array.append('{0:08b}'.format(ord(byte)))
@@ -33,21 +31,24 @@ def read_binary_into_string_array(file_path):
 
     # Add 4 bytes to the beginning of the array to store the data size
     # this is needed later when we extract the binary
-    # NOTE: This means we can only hide things in the single digit megabyte size (??)
 
     data_size = len(bin_string_array) / 1024
+    print data_size * 1024
     output_array = []
 
     for num in str(data_size):
-        # print '{0:08b}'.format(ord(num))
-        output_array.append('{0:08b}'.format(ord(num)))
+        #print 'Number: ' + str(num) + ' ' + '{0:08b}'.format(int(num))
+        output_array.append('{0:08b}'.format(int(num)))
 
-    output_array[1:1] = bin_string_array
+    #output_array[1:1] = bin_string_array
+    output_array.extend(bin_string_array)
+    print len(bin_string_array)
+    print len(output_array)
     return output_array, bit_count
 
 
 
-def write_binary_from_string(big_binary_string, out_file):
+def write_binary_from_string_array(binary_strin_array, out_file):
 
     # Write out a string of 1's and 0's to a binary file
 
@@ -66,9 +67,10 @@ def write_binary_from_string(big_binary_string, out_file):
     # integer value, we can ask python again to convert that to a character (chr(<int>)) which will give us
     # a binary character that we can then write to our file.
 
-    for byte_string in big_binary_string.splitlines():
+    for byte_string in binary_strin_array:
         bin_output.write(chr(int(byte_string,2)))
 
+    bin_output.close()
 
 def max_hidable(input_image):
 
@@ -150,10 +152,10 @@ def hide_file(payload_file, host_image):
     steg_image = Image.new('RGBA', (width, height))
     steg_image_data = steg_image.getdata()
 
+    print len(bin_string_array)
+
     #for pixel_value in list(steg_image_data):
     #    print pixel_value
-
-    print len(bin_string_array)
 
     print 'INFO: Embedding file'
     byte_index = 0
@@ -171,7 +173,8 @@ def hide_file(payload_file, host_image):
                 _, encoded_green_int = lsb_encode_byte(bin_string_array[byte_index][6:], '{0:08b}'.format(green), debug=False)
 
 
-                steg_image_data.putpixel((w,h),(encoded_red_int,encoded_blue_int,encoded_green_int, alpha))
+                steg_image_data.putpixel((w,h),(encoded_red_int,encoded_green_int, encoded_blue_int, alpha))
+                #steg_image_data.putpixel((w, h), (red, green, blue, alpha))
 
             else:
                 steg_image_data.putpixel((w, h), (red, green, blue, alpha))
@@ -198,7 +201,10 @@ def unhide_file(host_image):
 
     byte_count = 0
     size_array = []
+    data_array = []
     size_str = ""
+    data_size = 0
+
     for h in range(height):
         for w in range(width):
 
@@ -206,35 +212,39 @@ def unhide_file(host_image):
 
             if byte_count < 4:
 
-                print '{0:08b}'.format(red)
-                print '{0:08b}'.format(blue)
-                print '{0:08b}'.format(green)
-                print
-                print '{0:08b}'.format(red)[-3:]
-                print '{0:08b}'.format(blue)[-3:]
-                print '{0:08b}'.format(green)[-3:]
-
                 size_byte = get_lsb('{0:08b}'.format(red)) + get_lsb('{0:08b}'.format(blue)) + get_lsb('{0:08b}'.format(green))[-2:]
-                print 'Size byte: ' + size_byte
+                #print 'Size byte: ' + size_byte
                 size_array.append(size_byte)
 
             elif byte_count == 4:
-                print size_array
+                #print size_array
 
                 for byte_str in size_array:
                     # convert byte string to integer then append to new string
 
-                    print byte_str
+                    #print byte_str
                     size_str += str(int(byte_str,2))
 
-                print size_str
+                data_size = (int(size_str) * 1024)
+                print data_size
+
+                data_byte = get_lsb('{0:08b}'.format(red)) + get_lsb('{0:08b}'.format(blue)) + get_lsb('{0:08b}'.format(green))[-2:]
+                data_array.append(data_byte)
+
+            elif byte_count > 4 and byte_count <= data_size + 142:
+                data_byte = get_lsb('{0:08b}'.format(red)) + get_lsb('{0:08b}'.format(blue)) + get_lsb('{0:08b}'.format(green))[-2:]
+                data_array.append(data_byte)
+
 
             byte_count = byte_count + 1
+
+    print len(data_array)
+    write_binary_from_string_array(data_array, "output.zip")
 
 
 if __name__ == "__main__":
 
     hide_file('shakespeare.zip', 'input.png')
-    #print 'INFO: UN HIDING!'
-    #unhide_file('output.png')
+    print 'INFO: UN HIDING!'
+    unhide_file('output.png')
 
