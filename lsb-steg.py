@@ -97,9 +97,9 @@ def lsb_encode_byte(bits_to_hide, target_byte,debug=False):
     # TODO: Show how to use a bit mask here?
 
     if debug:
-        print 'input string: ' + target_byte
-        print target_byte[:-3]
-        print 'bits to hide: ' + bits_to_hide
+        print 'Target Byte: ' + target_byte
+        #print target_byte[:-3]
+        print 'Bits to hide: ' + bits_to_hide
 
     '''
     print target_byte
@@ -109,11 +109,12 @@ def lsb_encode_byte(bits_to_hide, target_byte,debug=False):
     print
     '''
 
-    if target_byte[3:] == bits_to_hide:
+
+    if target_byte[len(bits_to_hide):] == bits_to_hide:
         lsb_encode_byte_string = target_byte
 
     else:
-        lsb_encode_byte_string = target_byte[:-3] + bits_to_hide
+        lsb_encode_byte_string = target_byte[:-len(bits_to_hide)] + bits_to_hide
 
     if debug:
         print 'encoded: ' + lsb_encode_byte_string
@@ -165,13 +166,10 @@ def hide_file(payload_file, host_image):
 
             if byte_index < len(bin_string_array):
                # print 'hiding: ' + bin_string_array[byte_index]
-                _, encoded_red_int   = lsb_encode_byte(bin_string_array[byte_index][:3],'{0:08b}'.format(red), debug=False)
+                _, encoded_red_int   = lsb_encode_byte(bin_string_array[byte_index][:3], '{0:08b}'.format(red), debug=False)
                 _, encoded_blue_int  = lsb_encode_byte(bin_string_array[byte_index][3:6],'{0:08b}'.format(blue), debug=False)
+                _, encoded_green_int = lsb_encode_byte(bin_string_array[byte_index][6:], '{0:08b}'.format(green), debug=False)
 
-                # Pad the last part with a zero to fill out the byte.
-                # This is just to make our lives easier, but it is wasteful
-
-                _, encoded_green_int = lsb_encode_byte('0' + bin_string_array[byte_index][6:],'{0:08b}'.format(green), debug=False)
 
                 steg_image_data.putpixel((w,h),(encoded_red_int,encoded_blue_int,encoded_green_int, alpha))
 
@@ -181,7 +179,7 @@ def hide_file(payload_file, host_image):
             byte_index = byte_index + 1
 
     #steg_image.putdata(steg_image_data)
-    steg_image.save('output.jpg', 'JPEG')
+    steg_image.save('output.png', 'PNG')
 
     print 'INFO: Embedding complete'
 
@@ -236,7 +234,7 @@ def unhide_file(host_image):
 
 if __name__ == "__main__":
 
-    #hide_file('shakespeare.zip', 'input.jpg')
-    print 'INFO: UN HIDING!'
-    unhide_file('output.jpg')
+    hide_file('shakespeare.zip', 'input.png')
+    #print 'INFO: UN HIDING!'
+    #unhide_file('output.png')
 
