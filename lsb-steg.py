@@ -1,5 +1,8 @@
+import struct
+
 from PIL import Image
 from functools import partial
+
 
 # References:
 # https://github.com/cyberinc/cloacked-pixel
@@ -32,18 +35,25 @@ def read_binary_into_string_array(file_path):
     # Add 4 bytes to the beginning of the array to store the data size
     # this is needed later when we extract the binary
 
-    data_size = len(bin_string_array) / 1024
-    print data_size * 1024
-    output_array = []
+    # data_size = len(bin_string_array) / 1024
+    data_size = len(bin_string_array)
+    print data_size
 
+
+    #output_array = []
+    output_array = ['{0:08b}'.format(ord(b)) for b in struct.pack("i", data_size)]
+
+    '''
     for num in str(data_size):
         #print 'Number: ' + str(num) + ' ' + '{0:08b}'.format(int(num))
         output_array.append('{0:08b}'.format(int(num)))
+    '''
 
     #output_array[1:1] = bin_string_array
     output_array.extend(bin_string_array)
-    print len(bin_string_array)
+
     print len(output_array)
+    print output_array[:4]
     return output_array, bit_count
 
 
@@ -195,8 +205,6 @@ def unhide_file(host_image):
     image_data = steg_image.convert("RGBA").getdata()
     (width, height) = steg_image.size
 
-    hidden_data = []
-
     # get the size of the hidden data from the first 4 bytes
 
     byte_count = 0
@@ -215,26 +223,20 @@ def unhide_file(host_image):
                 size_byte = get_lsb('{0:08b}'.format(red)) + get_lsb('{0:08b}'.format(blue)) + get_lsb('{0:08b}'.format(green))[-2:]
                 #print 'Size byte: ' + size_byte
                 size_array.append(size_byte)
+                size_str = size_str + chr(int(size_byte,2))
 
             elif byte_count == 4:
-                #print size_array
 
-                for byte_str in size_array:
-                    # convert byte string to integer then append to new string
+                data_size = struct.unpack("i", size_str[:4])[0]
 
-                    #print byte_str
-                    size_str += str(int(byte_str,2))
-
-                data_size = (int(size_str) * 1024)
                 print data_size
 
                 data_byte = get_lsb('{0:08b}'.format(red)) + get_lsb('{0:08b}'.format(blue)) + get_lsb('{0:08b}'.format(green))[-2:]
                 data_array.append(data_byte)
 
-            elif byte_count > 4 and byte_count <= data_size + 142:
+            elif byte_count > 4 and byte_count <= data_size + 3:
                 data_byte = get_lsb('{0:08b}'.format(red)) + get_lsb('{0:08b}'.format(blue)) + get_lsb('{0:08b}'.format(green))[-2:]
                 data_array.append(data_byte)
-
 
             byte_count = byte_count + 1
 
