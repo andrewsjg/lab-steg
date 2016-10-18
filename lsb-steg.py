@@ -20,8 +20,24 @@ def read_binary_into_string_array(file_path):
 
     with open(file_path, 'rb') as input_file:
 
-        # TODO: Document partial
-        for byte in iter(partial(input_file.read, 1), ''):
+        # Here we use a neat feature called partial functions to create a function on the fly to iterate through the input file one byte at a time and build a nice string array.
+
+        # The functools module (https://docs.python.org/2/library/functools.html) provides high-order functions features in Python.
+        # Higher Order functions is a fancy name for a function that acts on or returns another function. This is one of the pillars of functional programming
+        # but that is a story for another day...
+
+        # We want to process the file 1 byte at time to build up our byte array represented as strings of digits. To do this we need to iterate
+        # over the file from beginning to end one byte at a time.
+
+        # Python provides a way to do this using iterator objects: https://docs.python.org/2/glossary.html#term-iterator 
+
+        file_reader = partial(input_file.read, 1)
+
+        # Another way to write the for statement is shown below, however for the purposes of clarity and description, I think explicitly creating a function variable in this case
+        # is easier to follow.
+
+        #  for byte in iter(partial(input_file.read, 1), ''):
+        for byte in iter(file_reader, ''):
             if len(byte) > 0:
                 # found on stackoverflow here: http://stackoverflow.com/questions/2872381/how-to-read-a-file-byte-by-byte-in-python-and-how-to-print-a-bytelist-as-a-binar
                 #bin_string += '{0:08b}'.format(ord(byte)) + '\n'
