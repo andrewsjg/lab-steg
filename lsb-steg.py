@@ -240,7 +240,7 @@ def hide_file(payload_file, host_image):
         for w in range(width):
             (red, green, blue, alpha) = rgba_image_data.getpixel((w, h))
 
-            #TODO: Figure out a better way of doing this part so I dont lose 1 bit of space on each encode step
+            # This is by far not the most efficient way of doing this!
 
             # Check to see if the number of bytes we have processed so far is still less than the number of bytes we need to hide
             # If it is then we do some hiding otherwise we just write he original data of the host image back out to the output
@@ -276,6 +276,7 @@ def hide_file(payload_file, host_image):
 
     print 'INFO: Embedding complete'
 
+# Simple helper function to output the least significant bits of a string representation of a byte
 def get_lsb(input_byte_string):
     return input_byte_string[-3:]
 
@@ -308,8 +309,6 @@ def unhide_file(host_image):
 
                 data_size = struct.unpack("i", size_str[:4])[0]
 
-                print data_size
-
                 data_byte = get_lsb('{0:08b}'.format(red)) + get_lsb('{0:08b}'.format(blue)) + get_lsb('{0:08b}'.format(green))[-2:]
                 data_array.append(data_byte)
 
@@ -319,7 +318,6 @@ def unhide_file(host_image):
 
             byte_count = byte_count + 1
 
-    print len(data_array)
     write_binary_from_string_array(data_array, "output.zip")
 
 
