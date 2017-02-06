@@ -142,8 +142,13 @@ def lsb_encode_byte(bits_to_hide, target_byte,debug=False):
     # It assumes the "bits" to hide are a string of 1's and 0's
     # and the target byte is also a string of 8 1's and zeros
 
-    # This function simply replaces the last 3 characters of the string
-    # TODO: Show how to use a bit mask here?
+    # This function simply replaces the last x characters of the string (target_byte)
+    # with the bits_to_hide string
+
+    # To do this in reality you would operate on the actual bits
+    # and use pythons bitwise operators to mask the target byte
+    # and replace the least significant bits with the bits to hide
+    # see: https://wiki.python.org/moin/BitwiseOperators
 
     if debug:
         print 'Target Byte: ' + target_byte
@@ -173,11 +178,30 @@ def hide_file(payload_file, host_image):
     # This function does the work of hiding the payload file inside an image file
 
     print ('INFO: Reading in payload file')
+    # Read the binary we want to hide into the string bin_string_array. This function has returns two
+    # values: a string representation of the binary and the count of the number of bits
+
     bin_string_array, bit_count = read_binary_into_string_array(payload_file)
+
+    # Read in the image. Here we are using the pillow image library, which
+    # will need to be installed to run this code see: https://python-pillow.org/, to read in the
+    # host image.
+    #
+    # This is the on concession in this code. I dont manually read in and manipulate the image.
+    # This is doable natively in python, however this code is above the LSB Steganography piece
+    # and not reading and manipulating image files.
+    # If this were a pure bitmap we could just read it directly and easily twiddle the image bits
+    # However we want to use PNG files which have compression, headers and other metadata we need to
+    # navigate to get at the image data (bits). So instead of getting bogged down in that, we let pillow
+    # do the heavy lifting.
     input_image = Image.open(host_image)
+
+    # Get the max hideable size so we can check if we can hide the data in the target file
+    # This function returns three values. The width and height of the image as well as the max hideable size
 
     (width, height, max_hideable_size) = max_hidable(input_image)
 
+    # Do the check to see if we can hide the file
     print 'INFO: Checking capacity of host image for this payload'
     if (bit_count / 8 / 1024) < max_hideable_size:
         print 'INFO: Host image is able to embed payload'
@@ -188,18 +212,28 @@ def hide_file(payload_file, host_image):
         # return an error state
         return 1
 
-    # get the RGBA image data from the host file
+    # Get the Red, Green, Blue and Alpha (RGBA) image data from the host file
     rgba_image_data = input_image.convert("RGBA").getdata()
 
     # Create a new image that will contain the host image and the hidden data.
     # Make it the same width and height as the source image using the information retrieved via
     # the max_hideable function call above
+    # The new image will have  Red, Green, Blue and Alpha (RGBA) channels and be the same height and width
+    # as the host image. The RGB data for each pixel
+
     steg_image = Image.new('RGBA', (width, height))
+
+    # Now extract out only the image data from the file. Not any headers or other metadata.
+    # We can manipulate this data and only affect the image itself and not the overall integrity of the
+    # entire file. For example if we changed some header information it would make the file
+    # unreadable by image viewers so it would no longer look like or be a valid image.
     steg_image_data = steg_image.getdata()
 
-    print len(bin_string_array
-
     print 'INFO: Embedding file'
+
+    # Lopp over the image data by height and width. For every iteration of the height (outer) loop
+    # we get a bunch of bits making up one line in the image. Its the least significant bit of each red, green and blue byte
+    # where we will hide our data.
     byte_index = 0
     for h in range(height):
 
@@ -208,22 +242,36 @@ def hide_file(payload_file, host_image):
 
             #TODO: Figure out a better way of doing this part so I dont lose 1 bit of space on each encode step
 
+            # Check to see if the number of bytes we have processed so far is still less than the number of bytes we need to hide
+            # If it is then we do some hiding otherwise we just write he original data of the host image back out to the output
+            # image
+
             if byte_index < len(bin_string_array):
-               # print 'hiding: ' + bin_string_array[byte_index]
+               # This is where we hide our payload! We lsb encode the first 3 bits in the red byte, the next 3 bits in the blue byte
+               # and another 3 bits in the green byte.
+               # So we can hide 9 bits of our payload per line in our host image.
+
+               # We could also hide things in the alpha channel, but this has a more adverse affect on the image, so
+               # for this example I have steer clear and we just use the same alpha as the source.
+
+               # Since the payload is encoded as 1's and 0's in a string, we can just silce the string up using the ranges / slices
+               # see: https://docs.python.org/2/tutorial/introduction.html for some better examples
+               # The {0:08b} bit is described above.
                 _, encoded_red_int   = lsb_encode_byte(bin_string_array[byte_index][:3], '{0:08b}'.format(red), debug=False)
                 _, encoded_blue_int  = lsb_encode_byte(bin_string_array[byte_index][3:6],'{0:08b}'.format(blue), debug=False)
                 _, encoded_green_int = lsb_encode_byte(bin_string_array[byte_index][6:], '{0:08b}'.format(green), debug=False)
 
+                # Write the encoded pixel (consisting of the red, green and blue elements) to our output image.
 
                 steg_image_data.putpixel((w,h),(encoded_red_int,encoded_green_int, encoded_blue_int, alpha))
-                #steg_image_data.putpixel((w, h), (red, green, blue, alpha))
 
             else:
                 steg_image_data.putpixel((w, h), (red, green, blue, alpha))
 
+            # Increment the byte_index counter to keep track of how many bytes we have procesed.
             byte_index = byte_index + 1
 
-    #steg_image.putdata(steg_image_data)
+    # Once we are done, save the image out as a PNG.
     steg_image.save('output.png', 'PNG')
 
     print 'INFO: Embedding complete'
