@@ -112,6 +112,8 @@ def write_binary_from_string_array(binary_string_array, out_file):
     bin_output.close()
 
 def max_hidable(input_image):
+    # Simple function to determine the maximum amount of data that can be hidden in
+    # is given input image
 
     img = input_image
     (width, height) = img.size
@@ -124,32 +126,35 @@ def max_hidable(input_image):
 
 
 def size_required_to_hide(input_size_bits):
-
+    # Simple function to determine what data size is required to hid the given input data
     return 3 * 8 * input_size_bits
 
 
 def bits_from_bytes(byte_size):
-
+    # Simple function to return the number of bits in a given quatity of bytes
     return byte_size * 1024 * 8
 
 
 def lsb_encode_byte(bits_to_hide, target_byte,debug=False):
 
+    # This function takes some bits to hide and a byte to hide them in
+    # and hides them in the least significant bits of that byte
+    # It assumes the "bits" to hide are a string of 1's and 0's
+    # and the target byte is also a string of 8 1's and zeros
+
+    # This function simply replaces the last 3 characters of the string
     # TODO: Show how to use a bit mask here?
 
     if debug:
         print 'Target Byte: ' + target_byte
-        #print target_byte[:-3]
         print 'Bits to hide: ' + bits_to_hide
 
-    '''
-    print target_byte
-    print target_byte[3:]
-    print
-    print 'Bits to hide: ' + bits_to_hide
-    print
-    '''
+    # If the least significant bits of the target byte are the same as the bits we need to hide we do nothing.
+    # Simply return the target_byte
+    # Otherwise replace the least significant bits of the byte with the new bits passed.
 
+    # Obviously the more bits we replace in the byte, the bigger the change to the end data (image in this case)
+    # so we would tend to only replace the last 3 or 4 bits in the image data.
 
     if target_byte[len(bits_to_hide):] == bits_to_hide:
         lsb_encode_byte_string = target_byte
@@ -165,6 +170,7 @@ def lsb_encode_byte(bits_to_hide, target_byte,debug=False):
 
 
 def hide_file(payload_file, host_image):
+    # This function does the work of hiding the payload file inside an image file
 
     print ('INFO: Reading in payload file')
     bin_string_array, bit_count = read_binary_into_string_array(payload_file)
@@ -191,10 +197,7 @@ def hide_file(payload_file, host_image):
     steg_image = Image.new('RGBA', (width, height))
     steg_image_data = steg_image.getdata()
 
-    print len(bin_string_array)
-
-    #for pixel_value in list(steg_image_data):
-    #    print pixel_value
+    print len(bin_string_array
 
     print 'INFO: Embedding file'
     byte_index = 0
