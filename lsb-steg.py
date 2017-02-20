@@ -280,50 +280,87 @@ def hide_file(payload_file, host_image):
 def get_lsb(input_byte_string):
     return input_byte_string[-3:]
 
+# This function retrieves a hidden file from a host image. i.e. It Does the reverse of the above
 def unhide_file(host_image):
+
+    # Again we use Pillow to provide the image handling
     steg_image = Image.open(host_image)
 
+    # Grab the RGBA image data out of the PNG image
     image_data = steg_image.convert("RGBA").getdata()
     (width, height) = steg_image.size
 
-    # get the size of the hidden data from the first 4 bytes
-
     byte_count = 0
-    size_array = []
+    # size_array = []
     data_array = []
     size_str = ""
     data_size = 0
 
+    # Iterate over the image data, going up the height of the image and across the width. Processing the RGBA
+    # data from each pixel
     for h in range(height):
         for w in range(width):
 
+            # Grab the RGBA bypte from the pixel at the current width and height location
             (red, green, blue, alpha) = image_data.getpixel((w, h))
+
+            # The least significant bits of the first four bytes encode the size of the hidden data.
+            # Therefore we build up a string of bytes that encode the size of the data when processing the first four bytes
 
             if byte_count < 4:
 
+                # Get the least significant bits of each of RGB (actually RBG, as that's they way we did it above) bytes
+                # and concatenate them together to form a single byte component.
+
+                # The [-2:] part means return a string minus the last 2 characters.
+                # TODO: Explain this!
                 size_byte = get_lsb('{0:08b}'.format(red)) + get_lsb('{0:08b}'.format(blue)) + get_lsb('{0:08b}'.format(green))[-2:]
-                size_array.append(size_byte)
+                # size_array.append(size_byte)
+
+                # In line with our model to use strings of 0's and 1's...
+                # Turn the byte data into a string of 0's and 1's and append to the size string
                 size_str = size_str + chr(int(size_byte,2))
 
+            # If we are at the 4th byte, we do the unpack of the size data
             elif byte_count == 4:
 
+                #[:4] part means return the part of the string upto the last 4 characters.
+                #TODO: Explain this!
+
+                # Pass in our size string (minus the last 4 charaters) to struct.unpack. the "i" option tells unpack
+                # that the data we are unpacking is an integer
+                # Since unpact provides a list as a return type which has one element, we get the first (0th) element from the list
+                # and that is the size of the data we are going to unhide.
                 data_size = struct.unpack("i", size_str[:4])[0]
 
+                # Now grab the first real data of our hidden file. As above, we read the least significant bits from the RGB values.
+                # Then we append the data to an array of bytes for later extraction
                 data_byte = get_lsb('{0:08b}'.format(red)) + get_lsb('{0:08b}'.format(blue)) + get_lsb('{0:08b}'.format(green))[-2:]
                 data_array.append(data_byte)
 
+            # If we are past byte for but less than the datasize (TODO: Explain the +3!)
+            # we continue to iterate over the image data appending the data to the data array
             elif byte_count > 4 and byte_count <= data_size + 3:
                 data_byte = get_lsb('{0:08b}'.format(red)) + get_lsb('{0:08b}'.format(blue)) + get_lsb('{0:08b}'.format(green))[-2:]
                 data_array.append(data_byte)
 
+            # Increment our byte count on each iteration
             byte_count = byte_count + 1
 
+    # Finally write out the data using the data array we constructed above.
+    # In this case we are assuming the data is a zip file. It could be anything, but in this case, I have
+    # explicitly stated it is a zip file, becuase for the demo I know it will be!
     write_binary_from_string_array(data_array, "output.zip")
 
 
 if __name__ == "__main__":
 
+    # Run the script to encode the complete works of Shakespeare in and image, then unhide it.
+
     hide_file('shakespeare.zip', 'input.png')
     print 'INFO: UN HIDING!'
+    # Because the script is hardcoded to produce output.png we can simply run unhide on output.png
+    # It would be better if hide_file took a string option to specify the output file name so that any
+    # file name can be used. 
     unhide_file('output.png')
 
